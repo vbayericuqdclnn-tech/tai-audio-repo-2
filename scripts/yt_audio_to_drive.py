@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# YouTube audio -> M4A -> Google Drive (FIXED VERSION)
+# YouTube audio -> M4A -> Google Drive (FIX: avoid HLS/m3u8 403 fragments)
 
 import os, sys, re, json, time, shutil, tempfile
 from pathlib import Path
@@ -206,26 +206,73 @@ def drive_upload_file(service, file_path: Path, folder_id: str):
     return created["id"], "created"
 
 # --- LOGIC YT-DLP ---
+def _detect_js_runtimes():
+    """
+    Trong Python API, yt-dlp đôi khi không tự thấy JS runtime dù workflow có cài.
+    Ta khai báo path trực tiếp để chắc ăn.
+    """
+    runtimes = {}
+    deno = shutil.which("deno")
+    node = shutil.which("node")
+    bun  = shutil.which("bun")
+
+    if deno:
+        runtimes["deno"] = {"path": deno}
+    if node:
+        runtimes["node"] = {"path": node}
+    if bun:
+        runtimes["bun"]  = {"path": bun}
+
+    if runtimes:
+        print("[EJS] JS runtimes detected:", ", ".join(f"{k}={v.get('path')}" for k, v in runtimes.items()))
+    else:
+        print("[EJS] WARN: Không thấy deno/node/bun trong PATH. EJS có thể fail.")
+    return runtimes
+
 BASE_YDL_OPTS = {
-    "format": "bestaudio[ext=m4a]/bestaudio/best",
+    # FIX CHÍNH:
+    # - Tránh HLS/m3u8 (thứ gây 403 fragment)
+    # - Ưu tiên audio m4a (140) hoặc fallback
+    "format": (
+        "140/"
+        "bestaudio[ext=m4a][protocol!=m3u8_native][protocol!=m3u8]/"
+        "bestaudio[protocol!=m3u8_native][protocol!=m3u8]/"
+        "bestaudio"
+    ),
     "merge_output_format": "m4a",
     "outtmpl": str(OUT_DIR / "%(title)s.%(ext)s"),
     "noplaylist": True,
     "quiet": False,
     "nocheckcertificate": True,
+    "cachedir": False,
+
     "postprocessors": [{"key": "FFmpegExtractAudio", "preferredcodec": "m4a"}],
-    "retries": 5,
-    "fragment_retries": 5,
+
+    "retries": 10,
+    "fragment_retries": 10,
+
+    # giảm rủi ro bị ban theo kiểu “spam fragments”
+    "concurrent_fragment_downloads": 1,
+
     "force_ipv4": True,
-    # Né SABR tối đa
-    "hls_use_mpegts": True,
-    "concurrent_fragment_downloads": 8,
-    "format_sort": ["proto:m3u8", "res"],
-    "format_sort_force": False,
+
+    # Header giúp đỡ trong một số trường hợp CDN khó chịu
+    "http_headers": {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Referer": "https://www.youtube.com/",
+        "Origin": "https://www.youtube.com",
+    },
+
     # FIX YouTube JS challenge (EJS): cho phép yt-dlp tự tải solver script từ GitHub
-    # (cần cài JS runtime như Deno trong workflow)
     "remote_components": {"ejs:github"},
 }
+
+# khai báo rõ JS runtimes để yt-dlp dùng được trong Python API
+_js = _detect_js_runtimes()
+if _js:
+    BASE_YDL_OPTS["js_runtimes"] = _js
+
 if FFMPEG_DIR:
     BASE_YDL_OPTS["ffmpeg_location"] = FFMPEG_DIR
 
@@ -233,10 +280,16 @@ last_good_cookie_idx = 0  # nhớ bộ cookie nào gần nhất đã thành côn
 
 def _ydl_opts_with_client(base_opts: dict, player_clients: list, cookiefile: Optional[str], po_tok: str):
     opts = dict(base_opts)
-    ex_args = {"youtube": {"player_client": player_clients}}
+
+    # FIX CHÍNH: skip hls => không lấy m3u8 manifests => không dính HLS fragments
+    ex_args = {"youtube": {"player_client": player_clients, "skip": ["hls"]}}
+
+    # (giữ như bạn đang làm) po_token chỉ gắn cho web clients
     if po_tok and any(pc.startswith("web") for pc in player_clients):
         ex_args["youtube"]["po_token"] = [f"web+{po_tok}"]
+
     opts["extractor_args"] = ex_args
+
     if cookiefile:
         opts["cookiefile"] = cookiefile
     else:
@@ -272,11 +325,11 @@ def try_download_with_cookies(url: str) -> Tuple[bool, Optional[str], Optional[P
     for ck_idx in order:
         cookiefile = COOKIE_FILES[ck_idx] if ck_idx is not None else None
         if cookiefile:
-            plans = [["web_safari"], ["web_embedded"], ["web"], ["android"]]
+            # Ưu tiên android trước (thường ra https/dash ổn hơn web_safari)
+            plans = [["android"], ["web"], ["web_embedded"], ["web_safari"]]
             print(f"   -> Thử cookie set #{ck_idx}")
         else:
-            # Không cookie: ưu tiên android để dễ ra HLS
-            plans = [["android"], ["web_safari"], ["web_embedded"], ["web"]]
+            plans = [["android"], ["web"], ["web_embedded"], ["web_safari"]]
 
         for pcs in plans:
             try:
@@ -302,7 +355,6 @@ def try_download_with_cookies(url: str) -> Tuple[bool, Optional[str], Optional[P
                         last_good_cookie_idx = ck_idx
                     return True, None, new_files[0]
                 else:
-                    # Có thể đã tồn tại từ trước
                     return True, "Không có file mới được tạo (có thể đã tồn tại)", None
 
             except Exception as e:
