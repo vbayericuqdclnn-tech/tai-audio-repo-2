@@ -1,6 +1,31 @@
 name: "YouTube Audio to Drive (fixed)"
 
 on:
+  schedule:
+    - cron: "0 1 * * *"  # chạy 04:00 VN hằng ngày (tương đương 21:00 UTC ngày trước)
+    - cron: "0 2 * * *"   # chạy 15:00 VN hằng ngày (08:00 UTC)
+    - cron: "0 3 * * *"   # chạy 15:00 VN hằng ngày (08:00 UTC)
+    - cron: "0 4 * * *"  # chạy 04:00 VN hằng ngày (tương đương 21:00 UTC ngày trước)
+    - cron: "0 5 * * *"   # chạy 15:00 VN hằng ngày (08:00 UTC)
+    - cron: "0 6 * * *"   # chạy 15:00 VN hằng ngày (08:00 UTC)
+    - cron: "0 7 * * *"  # chạy 04:00 VN hằng ngày (tương đương 21:00 UTC ngày trước)
+    - cron: "0 8 * * *"   # chạy 15:00 VN hằng ngày (08:00 UTC)
+    - cron: "0 9 * * *"   # chạy 15:00 VN hằng ngày (08:00 UTC)
+    - cron: "0 10 * * *"  # chạy 04:00 VN hằng ngày (tương đương 21:00 UTC ngày trước)
+    - cron: "0 11 * * *"   # chạy 15:00 VN hằng ngày (08:00 UTC)
+    - cron: "0 12 * * *"  # chạy 04:00 VN hằng ngày (tương đương 21:00 UTC ngày trước)
+    - cron: "0 13 * * *"   # chạy 15:00 VN hằng ngày (08:00 UTC)
+    - cron: "0 14 * * *"   # chạy 15:00 VN hằng ngày (08:00 UTC)
+    - cron: "0 15 * * *"  # chạy 04:00 VN hằng ngày (tương đương 21:00 UTC ngày trước)
+    - cron: "0 16 * * *"   # chạy 15:00 VN hằng ngày (08:00 UTC)
+    - cron: "0 17 * * *"   # chạy 15:00 VN hằng ngày (08:00 UTC)
+    - cron: "0 18 * * *"  # chạy 04:00 VN hằng ngày (tương đương 21:00 UTC ngày trước)
+    - cron: "0 19 * * *"   # chạy 15:00 VN hằng ngày (08:00 UTC)
+    - cron: "0 20 * * *"   # chạy 15:00 VN hằng ngày (08:00 UTC)
+    - cron: "0 21 * * *"  # chạy 04:00 VN hằng ngày (tương đương 21:00 UTC ngày trước)
+    - cron: "0 22 * * *"   # chạy 15:00 VN hằng ngày (08:00 UTC)
+
+
   workflow_dispatch: {}
 
 jobs:
