@@ -2,7 +2,13 @@ name: "YouTube Audio to Drive (fixed)"
 
 on:
   schedule:
-    - cron: "*/20 * * * *"   # every 20 minutes (UTC)
+    - cron: "0 1 * * *"  # chạy 04:00 VN hằng ngày (tương đương 21:00 UTC ngày trước)
+    - cron: "0 4 * * *"   # chạy 15:00 VN hằng ngày (08:00 UTC)
+    - cron: "0 7 * * *"   # chạy 15:00 VN hằng ngày (08:00 UTC)
+    - cron: "0 10 * * *"  # chạy 04:00 VN hằng ngày (tương đương 21:00 UTC ngày trước)
+    - cron: "0 13 * * *"   # chạy 15:00 VN hằng ngày (08:00 UTC)
+    - cron: "0 16 * * *"   # chạy 15:00 VN hằng ngày (08:00 UTC
+    - cron: "0 19 * * *"  # chạy 04:00 VN hằng ngày (tương đương 21:00 UTC ngày trước)
 
 
   workflow_dispatch: {}
