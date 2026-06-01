@@ -15,7 +15,7 @@ jobs:
 
     env:
       MAX_PER_RUN: "100"
-      SLEEP_SECONDS: "5"
+      SLEEP_SECONDS: "15"
 
       LINKS_FILE: "links.txt"
       DALAY_FILE: "dalay.txt"
